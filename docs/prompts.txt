@@ -1,0 +1,7 @@
+We want to build a business requiremnt analyzer. the analyzer is going to intake user / client requiremnts from muultiple sources and chat based intent, then it is going to process the input through a RAG based agentic system and the output should be a specifications document. we want to begin with research so that the product team can pick up and build the initial user story or epic. Create a research document for this project outlining the scope, problem statement or space and a use case for RAG based agentic workflow
+
+ uses an unsupported text encoding.
+chitragupt is a RAG based agentic business Requirement analyzer. Based on the docs in /docs create a BRA Research Doc for our product team with a mermaid style diagram(s) in .md once done delete the *.docx file
+chitragupt is a RAG based agentic business Requirement analyzer. Based on the docs in /docs create a B
+12:30 PM
+chitragupt is a RAG based agentic business Requirement analyzer. Based on the docs in /docs create a BRA Research Doc for our product team with a mermaid style diagram(s) in .md once done delete the *.docx file
