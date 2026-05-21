@@ -113,6 +113,9 @@
 **P-026**
 > push this all chnages to https://github.com/bc0de0/chitragupt
 
+**P-027**
+> newly created flow .md  files  for each sestion are missing
+
 ---
 
 > End of Prompt Trail • Chitragupt • May 2026
