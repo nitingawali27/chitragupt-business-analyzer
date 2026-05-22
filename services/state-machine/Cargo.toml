@@ -1,0 +1,45 @@
+[package]
+name = "chitragupt-state-machine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Revorion AI <kunal@revorion.ai>"]
+description = "Chitragupt state machine kernel — HITL session orchestration"
+
+[lib]
+name = "chitragupt_state_machine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "state-machine"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# IDs and time
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Logging / tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# gRPC — commented out until Sprint 1 EPIC-1 (requires protoc)
+# tonic = { version = "0.11", features = ["tls"] }
+# prost = "0.12"
+
+# Database — commented out until Sprint 1 EPIC-2
+# sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres", "uuid", "chrono"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+

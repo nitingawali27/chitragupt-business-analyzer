@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Rust — state-machine kernel
+  # Runs inside Docker: fmt check → clippy → 188 unit/integration tests
+  # Uses the runner's system Docker daemon (avoids buildx container-driver
+  # network isolation that prevents Docker Hub pulls).
+  # ─────────────────────────────────────────────────────────────────────────────
+  state-machine:
+    name: State Machine (Rust)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build tester stage (fmt · clippy · tests)
+        run: docker build --target tester .
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Python — AI / RAG orchestration  (enable when services/ai-orchestration exists)
+  # ─────────────────────────────────────────────────────────────────────────────
+  # ai-orchestration:
+  #   name: AI Orchestration (Python)
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - run: docker build --target tester services/ai-orchestration
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Go — API gateway  (enable when services/api-gateway exists)
+  # ─────────────────────────────────────────────────────────────────────────────
+  # api-gateway:
+  #   name: API Gateway (Go)
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - run: docker build --target tester services/api-gateway

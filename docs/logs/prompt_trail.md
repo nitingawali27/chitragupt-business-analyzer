@@ -86,35 +86,55 @@
 > create another dir called diagrams in /docs which has detailed diagrams - we need solid diagrams for state machine at a concept level hard gates why we need it and so on. all diagrams should be simple to understand and mermaid style create some important understanding docs for now 4-5 should be enough
 
 **P-024**
-> Navigate to D:\Chitragupt
+> let us begin with a simple project scaffolding - I have a local rust toolchain on my local machine - we build the rust kernel only for now nothing else with required files and stubs only, tools, cargo dependencies etc and ensure minimal build works - if this is not part of sprint1 make it. log the prompt and start
 
 **P-025**
-> Create a Markdown file named `flow_section.md`.
-> 
-> Goal:
-> Generate clear, beginner-friendly Mermaid diagrams for each major section of the project/framework so that a new user can quickly understand the overall workflow and module interactions.
-> 
-> Instructions:
-> 1. Divide the document into logical sections/modules.
-> 2. Each section must contain:
->    - Short explanation (2-5 lines)
->    - Simple Mermaid flowchart
->    - Important components involved
->    - Input → Process → Output flow
-> 3. Keep diagrams simple and readable.
-> 4. Avoid overly complex arrows/cross-links.
-> 5. Use consistent naming conventions.
-> 6. Use Markdown headings properly.
-> 7. Every Mermaid diagram must render correctly in GitHub and VS Code.
-> 8. Prefer `flowchart TD` syntax.
-> 9. Add a final "Complete High-Level Flow" section combining all modules.
-> 10. Add comments in Mermaid where useful.
+> now it is important to move sprint0 and 1 into the /docs folder and reflect our new choices - lets not overdo sprint0 which can have basic discovery and documentation tasks. Also now we need another folder called /tech-docs with detailed explaination of how our state machine works. Clean up the repo and especially docs to reflect all this - also introduce a contributing.md and a license.md, make the readme professional
 
 **P-026**
-> push this all chnages to https://github.com/bc0de0/chitragupt
+> wonderful now move the tech-docs in /docs also and then push to remote
 
 **P-027**
-> newly created flow .md  files  for each sestion are missing
+> a small bio for the github remote please
+
+**P-028**
+> now create a /tests dir and write unit tests for the services/state-machine and ensure all the tests assert true or pass cover both positive and negative senarios include edge or boundary cases. Use appropriate test sub dirs for testing
+
+**P-029**
+> create a .github dir with a ci.yaml file for github actions only - passing criteria for now  is the unit or e2e tests if any then push to remote
+
+**P-031**
+> [fmt diff from CI — cargo fmt --check failures across error.rs, manager.rs, main.rs, and test files]. fix this issue
+
+**P-030**
+> Run cargo fmt --check
+>   cargo fmt --check
+>   shell: /usr/bin/bash -e {0}
+>   env:
+>     CARGO_HOME: /home/runner/.cargo
+>     CARGO_INCREMENTAL: 0
+>     CARGO_TERM_COLOR: always
+>     CACHE_ON_FAILURE: false
+> error: target tuple in channel name 'stable-x86_64-pc-windows-gnu'
+> Error: Process completed with exit code 1. fix this ci error in ci
+
+**P-034**
+> the docs in sprint 1 did not contextualize the docs in sprint 0 modify sprint 0 or 1 as needed to optimize the project - use BA specific language and narrative for the docs. This is not technical documenttation - that we will create much later
+
+**P-033**
+> for the 2nd part of the sprint1 - we want LLMs for the following functions: 1. Intent classification 2. RAG based search 3. Visual diagrams understanding 4. Document exploration / chunking / embeddings 5. Output or SRS creation 6. For data transformations 8. Requirement refinement 9. voice / image to text 10. localization Also we want the LLM and the state to be injected at runtime only into the session or user object which we will define later - we will use lazy loading to avoid unecessary delays - and follow a factory or session factory architecture - keeping this in mind now create a design pattern strategy document in /sprints/sprint1 and the llm universe document. Also, keep in mind the constraints of complixity and budget
+
+**P-032**
+> error: use of `default` to create a unit struct … GateManager::default() … got this error again there is a dependency issue - lets make this docker first so that the githhub actions work without a issue - create the necessary docker files and then make changes to the ci accordingly ensure all test pass in docker and then push
+
+**P-035**
+> check all files and understand all things
+
+**P-036**
+> push all chnages to https://github.com/nitingawali27/chitragupt-business-analyzer also github action
+
+**P-037**
+> push to here
 
 ---
 

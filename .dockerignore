@@ -1,0 +1,9 @@
+.git/
+target/
+docs/
+.github/
+*.md
+CONTRIBUTING.md
+LICENSE.md
+.gitignore
+rust-toolchain.toml

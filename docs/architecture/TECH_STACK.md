@@ -498,48 +498,63 @@ All three services read from and write to the same PostgreSQL and Redis instance
 
 ## 8. Development Setup
 
-### Repository Structure (to be created in Sprint 1)
+### Repository Structure
 
 ```
 chitragupt/
-├── proto/                          Protobuf definitions (source of truth)
-│   ├── state_engine.proto
-│   ├── ai_orchestration.proto
-│   └── common.proto
+├── CONTRIBUTING.md                 Build, run, and contribution guide
+├── LICENSE.md                      Proprietary — Revorion AI
+├── Cargo.toml                      Rust workspace manifest
+├── rust-toolchain.toml             Pinned Rust toolchain
 │
 ├── services/
-│   ├── state-machine/              Rust — cargo workspace
+│   ├── state-machine/              Rust — session state machine (:50051 gRPC)
 │   │   ├── Cargo.toml
-│   │   ├── src/
-│   │   │   ├── main.rs
-│   │   │   ├── state/             SessionPhase enum, SessionState, transitions
-│   │   │   ├── ac/                AC evaluators (s1.rs through s6.rs)
-│   │   │   ├── gates/             Upload gate manager
-│   │   │   └── grpc/              tonic server implementation
-│   │   └── build.rs               prost codegen from proto/
+│   │   ├── proto/
+│   │   │   └── state_engine.proto  gRPC service definition
+│   │   └── src/
+│   │       ├── main.rs
+│   │       ├── state/              SessionPhase enum, SessionState, TransitionEngine
+│   │       ├── ac/                 AC evaluators (s1.rs – s6.rs)
+│   │       ├── gates/              Upload gate manager
+│   │       └── error.rs
 │   │
-│   ├── ai-orchestration/          Python — uv-managed
-│   │   ├── pyproject.toml
-│   │   ├── src/
-│   │   │   ├── pipeline/          LangGraph graph, agent nodes
-│   │   │   ├── agents/            intent_classifier, entity_extractor, etc.
-│   │   │   ├── rag/               retrieval, re-ranking, hybrid search
-│   │   │   ├── ingestion/         chunking, embedding, PII scrubbing
-│   │   │   └── grpc/              grpcio server implementation
-│   │   └── proto/                 generated Python stubs (committed)
+│   ├── ai-orchestration/           Python — LangGraph AI pipeline (:50052 gRPC)
+│   │   ├── pyproject.toml          uv-managed dependencies
+│   │   └── src/
+│   │       ├── pipeline/           LangGraph graph, per-turn agent dispatch
+│   │       ├── agents/             intent_classifier, entity_extractor, gap_analyzer, etc.
+│   │       ├── rag/                retrieval, hybrid search, re-ranking
+│   │       └── ingestion/          chunking, embedding, PII scrubbing
 │   │
-│   └── api-gateway/               Go — module
+│   └── api-gateway/                Go — WebSocket + REST gateway (:8080)
 │       ├── go.mod
 │       ├── cmd/server/main.go
-│       ├── internal/
-│       │   ├── handler/           HTTP + WebSocket handlers
-│       │   ├── middleware/         JWT, rate limit, CORS
-│       │   └── grpcclient/        Rust + Python gRPC clients
-│       └── proto/                 generated Go stubs (committed)
+│       └── internal/
+│           ├── handler/            HTTP + WebSocket handlers
+│           ├── middleware/          JWT, rate limit, CORS
+│           └── grpcclient/         Rust + Python gRPC clients
 │
-├── sprint0/
-├── sprint1/
-└── docs/
+├── proto/                          Protobuf source of truth (shared across services)
+│   ├── state_engine.proto          Rust server + Go client
+│   ├── ai_orchestration.proto      Python server + Rust client
+│   └── common.proto                SessionState, Entity, ChunkRef (shared messages)
+│
+├── docs/
+│   ├── sprints/
+│   │   ├── sprint0/                Discovery & documentation phase
+│   │   │   ├── BA_HITL_FLOW.md
+│   │   │   ├── ARCHITECTURE.md
+│   │   │   └── DECISIONS.md
+│   │   └── sprint1/                Core engine sprint
+│   │       └── README.md
+│   ├── architecture/               Technical reference (this file lives here)
+│   ├── diagrams/                   Mermaid concept diagrams
+│   └── logs/
+│       └── prompt_trail.md
+│
+    └── tech-docs/
+        └── state-machine.md        Deep-dive: AC system, gate types, gRPC interface
 ```
 
 ### Local Development

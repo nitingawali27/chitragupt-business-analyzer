@@ -1,10 +1,12 @@
 # Chitragupt
 
-**Agentic Business Requirement Analyzer** — from raw stakeholder input to a signed-off BRD, in hours, not weeks.
+**Agentic Business Requirement Analyzer** — from raw stakeholder input to a signed-off BRD, in hours not weeks.
 
-![Status](https://img.shields.io/badge/status-sprint__0__foundation-blue)
+![Status](https://img.shields.io/badge/status-sprint__1__in__progress-blue)
 ![License](https://img.shields.io/badge/license-proprietary-lightgrey)
-![Python](https://img.shields.io/badge/python-3.11%2B-green)
+![Rust](https://img.shields.io/badge/rust-1.78%2B-orange)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Go](https://img.shields.io/badge/go-1.22%2B-00aed8)
 
 ---
 
@@ -34,80 +36,77 @@ Every requirement is grounded in a source chunk. Every inference is tagged with 
 
 ## System Architecture
 
+Chitragupt is a **three-service polyglot system**, each language chosen for its computational profile:
+
+| Service | Language | Why |
+|---|---|---|
+| State Machine | **Rust** | Compile-time exhaustive state modeling, zero-GC, deterministic AC evaluation |
+| AI Orchestration / RAG | **Python** | LLM/ML ecosystem is Python-first; LLM latency dominates all other costs |
+| API Gateway | **Go** | High-throughput concurrent WebSocket connections; cheap goroutines; single binary |
+
+Services communicate over **gRPC** with protobuf. They share PostgreSQL and Redis. No service touches another service's database directly.
+
 ```mermaid
 graph TB
-    subgraph Inputs["External Inputs"]
-        BA[Business Analyst]
-        PM[Project Manager]
-        CLIENT[Client / Stakeholder]
-        CONN[Connectors\nJira · Confluence · Notion · Linear · Google]
-        FILE[File Uploads\nPDF · DOCX · Audio · Images · XLSX]
+    subgraph Clients["Clients"]
+        BA[Business Analyst\nBrowser / App]
+        WEBHOOK[Upstream Webhooks\nJira · Confluence]
     end
 
-    subgraph Ingestion["Ingestion Pipeline"]
-        PII[PII Scrubber]
-        CHUNK[Chunker]
-        EMBED[Embedding Model]
+    subgraph Go["Go — API Gateway · :8080"]
+        GW[Router + Middleware\nJWT Auth · Rate Limit]
+        WSH[WebSocket Handler\nStreaming response]
+        REST[REST Handlers\nSession · Upload · Export]
     end
 
-    subgraph Agents["Agent Intelligence Layer"]
-        ORCH[LangGraph Orchestrator\nHITL State Machine]
-        LLM_P[Premium LLM\nBRD · HLD Generation]
-        LLM_S[Standard LLM\nRequirement Extraction]
-        LLM_F[Fast LLM\nClassification · Routing]
+    subgraph Rust["Rust — State Machine · :50051"]
+        SM[Session State Machine\nPhase enum · AC evaluation]
+        GATE[Upload Gate Manager\nHard · Required · Triggered]
+        TRANS[Transition Handler\nConfirmation flow]
     end
 
-    subgraph DataLayer["Data Layer"]
-        VSTORE[(pgvector\nVector Store)]
-        RELDB[(PostgreSQL 16\nRelational DB)]
-        CACHE[(Redis\nSession Cache)]
-        OBJ[(S3\nObject Storage)]
+    subgraph Python["Python — AI Orchestration · :50052"]
+        LG[LangGraph Pipeline\nPer-turn agent graph]
+        IC[IntentClassifier · Fast LLM]
+        EE[EntityExtractor · Standard LLM]
+        RAG[RAGRetrieval · Hybrid search]
+        GA[GapAnalyzer · Standard LLM]
+        GG[GuidanceGenerator · Premium LLM]
+        ING[Ingestion Worker\nChunk · Embed · Index]
     end
 
-    subgraph HITLLayer["HITL Review Interface"]
-        REVIEW[Requirement Review]
-        CONFLICT[Conflict Resolution Panel]
-        SIGNOFF[Client Sign-off Workflow]
+    subgraph Data["Shared Data Layer"]
+        PG[(PostgreSQL 16 + pgvector)]
+        REDIS[(Redis\nSession cache · Events)]
+        S3[(S3\nRaw documents)]
     end
 
-    subgraph Outputs["Output Artifacts"]
-        BRD[BRD Document\nDOCX · PDF]
-        HLD[Architecture Diagram\nMermaid · PNG · SVG]
-        PUSH[Downstream Push\nJira · Confluence · Notion]
-    end
-
-    BA --> FILE
-    BA --> REVIEW
-    PM --> REVIEW
-    CLIENT --> SIGNOFF
-    CONN --> PII
-    FILE --> PII
-    PII --> CHUNK
-    CHUNK --> EMBED
-    EMBED --> VSTORE
-    EMBED --> RELDB
-    FILE --> OBJ
-
-    ORCH --> LLM_P
-    ORCH --> LLM_S
-    ORCH --> LLM_F
-    ORCH --> VSTORE
-    ORCH --> RELDB
-    ORCH --> CACHE
-
-    REVIEW --> ORCH
-    CONFLICT --> ORCH
-    SIGNOFF --> BRD
-    SIGNOFF --> HLD
-    BRD --> PUSH
-    HLD --> PUSH
+    BA -->|WebSocket| WSH
+    BA -->|REST| REST
+    WEBHOOK --> REST
+    WSH --> GW
+    REST --> GW
+    GW -->|gRPC ProcessTurn| SM
+    GW -->|gRPC IngestDocument| ING
+    SM --> GATE
+    SM --> TRANS
+    SM -->|gRPC RunPipeline| LG
+    LG --> IC --> EE --> RAG --> GA --> GG
+    GG -->|stream tokens| SM
+    SM -->|stream tokens| GW
+    GW -->|stream tokens| BA
+    SM --- PG
+    SM --- REDIS
+    LG --- PG
+    ING --- PG
+    ING --- S3
 ```
 
 ---
 
 ## BA HITL Flow
 
-The BA drives the entire session through structured conversation. The system leads — one question at a time — from problem statement to locked artifacts. Documents are uploaded only at designated checkpoints; nothing is required upfront.
+The BA drives the entire session through structured conversation. The system leads — one question at a time — from problem statement to locked artifacts.
 
 ```mermaid
 stateDiagram-v2
@@ -115,9 +114,9 @@ stateDiagram-v2
 
     [*] --> PROBLEM_INTAKE
 
-    PROBLEM_INTAKE --> STAKEHOLDER_DISCOVERY : Problem confirmed
+    PROBLEM_INTAKE --> STAKEHOLDER_DISCOVERY : AC-S1 met + BA confirms
 
-    STAKEHOLDER_DISCOVERY --> REQUIREMENT_ELICITATION : Actors confirmed
+    STAKEHOLDER_DISCOVERY --> REQUIREMENT_ELICITATION : AC-S2 met + BA confirms
 
     state STAKEHOLDER_DISCOVERY {
         [*] --> Chat
@@ -128,7 +127,7 @@ stateDiagram-v2
         CheckpointA --> [*]
     }
 
-    REQUIREMENT_ELICITATION --> CONSTRAINT_CAPTURE : Requirements confirmed
+    REQUIREMENT_ELICITATION --> CONSTRAINT_CAPTURE : AC-S3 met + BA confirms
 
     state REQUIREMENT_ELICITATION {
         [*] --> QandA
@@ -139,7 +138,7 @@ stateDiagram-v2
         CheckpointB --> [*]
     }
 
-    CONSTRAINT_CAPTURE --> ARCHITECTURE_ALIGNMENT : Constraints confirmed
+    CONSTRAINT_CAPTURE --> ARCHITECTURE_ALIGNMENT : AC-S4 met + BA confirms
 
     state CONSTRAINT_CAPTURE {
         [*] --> Elicit
@@ -150,10 +149,10 @@ stateDiagram-v2
         CheckpointC --> [*]
     }
 
-    ARCHITECTURE_ALIGNMENT --> REVIEW_AND_SIGN_OFF : Decisions guided
+    ARCHITECTURE_ALIGNMENT --> REVIEW_AND_SIGN_OFF : AC-S5 met + BA confirms
 
     REVIEW_AND_SIGN_OFF --> REQUIREMENT_ELICITATION : Revision requested
-    REVIEW_AND_SIGN_OFF --> SIGNED_OFF : BA approves
+    REVIEW_AND_SIGN_OFF --> SIGNED_OFF : AC-S6 met + BA approves
 
     state REVIEW_AND_SIGN_OFF {
         [*] --> DraftBRD
@@ -169,64 +168,66 @@ stateDiagram-v2
 
 ---
 
-## Data Pipeline
+## Per-Turn Data Flow
+
+On every BA message, the system evaluates state gates synchronously before calling any LLM:
 
 ```mermaid
-flowchart LR
-    subgraph IN["Input Layer"]
-        DOC[Document Upload]
-        SYNC[Connector Sync]
-        CHAT[Chat Session]
+sequenceDiagram
+    participant BA as BA (Browser)
+    participant Go as Go API Gateway
+    participant Rust as Rust State Machine
+    participant Python as Python AI Orchestration
+    participant DB as PostgreSQL
+    participant Cache as Redis
+
+    BA->>Go: WebSocket message
+    Go->>Go: Validate JWT, extract tenant_id
+    Go->>Rust: gRPC ProcessTurn
+
+    Rust->>Cache: Load SessionState (cache-first)
+    Rust->>Rust: Evaluate upload gates (no LLM)
+    alt Hard gate open
+        Rust-->>Go: UploadGatePrompt
+        Go-->>BA: Stream checkpoint prompt
+    else All gates clear
+        Rust->>Python: gRPC RunPipeline(SessionState, message)
+        Python->>Python: IntentClassifier → EntityExtractor → RAGRetrieval → GapAnalyzer → GuidanceGenerator
+        loop Stream tokens
+            Python-->>Rust: PipelineToken
+            Rust-->>Go: TurnToken
+            Go-->>BA: WebSocket token
+        end
+        Python-->>Rust: PipelineComplete
     end
 
-    subgraph PROC["Processing"]
-        PII[PII Scrubber]
-        CHK[Chunker\nTokens · Overlap]
-        EMB[Embedding Model\n1536-dim dense]
-        SPARSE[BM25 Sparse Vector]
-        META[Metadata Tagger\nTrust tier · Timestamps]
-    end
-
-    subgraph STORE["Storage"]
-        VEC[(pgvector\nDense + Sparse)]
-        REL[(PostgreSQL\nEntities + Audit)]
-        OBJ[(S3\nRaw Files)]
-    end
-
-    subgraph RAG["Retrieval & Synthesis"]
-        HYB[Hybrid Search\nDense + Sparse]
-        RERANK[Cross-Encoder\nRe-ranker]
-        CONF[Confidence Scorer\nCalibrated 0-1]
-        SYNTH[Synthesis Agent\nRequirement Extraction]
-    end
-
-    subgraph OUT["Output"]
-        SPEC[Specification\nRequirements · Constraints]
-        BRD[BRD Export]
-        HLD[HLD Diagram]
-    end
-
-    DOC --> PII
-    SYNC --> PII
-    CHAT --> PII
-    PII --> CHK
-    CHK --> EMB
-    CHK --> SPARSE
-    EMB --> META
-    SPARSE --> META
-    META --> VEC
-    META --> REL
-    DOC --> OBJ
-
-    VEC --> HYB
-    REL --> HYB
-    HYB --> RERANK
-    RERANK --> CONF
-    CONF --> SYNTH
-    SYNTH --> SPEC
-    SPEC --> BRD
-    SPEC --> HLD
+    Rust->>Rust: Apply entity updates · Evaluate AC · Check transition readiness
+    Rust->>DB: Persist updated SessionState
+    Rust->>Cache: Update session cache
+    Rust-->>Go: TurnComplete
+    Go-->>BA: TurnComplete event
 ```
+
+---
+
+## Current Status
+
+**Sprint 1 — Core Engine in progress.**
+
+| Component | Status |
+|---|---|
+| Rust state machine kernel | **Built** — `SessionPhase` enum, `SessionState`, AC evaluators, gate manager, `cargo build` ✓ |
+| Proto definition (`state_engine.proto`) | **Built** — gRPC service interface defined |
+| LangGraph pipeline (Python) | Todo — Sprint 1 P1 |
+| Intent classifier | Todo — Sprint 1 P1 |
+| Entity extractors | Todo — Sprint 1 P1 |
+| RAG retrieval | Todo — Sprint 1 P1 |
+| Document ingestion | Todo — Sprint 1 P2 |
+| Go API gateway | Todo — Sprint 1 parallel track |
+| BRD generator | Todo — Sprint 1 P3 / Sprint 2 |
+| HLD generator | Todo — Sprint 1 P3 / Sprint 2 |
+
+See [`docs/sprints/sprint1/README.md`](docs/sprints/sprint1/README.md) for the full priority ladder and epic breakdown.
 
 ---
 
@@ -235,22 +236,48 @@ flowchart LR
 ```
 chitragupt/
 │
-├── CLAUDE.md                           Claude Code project instructions + prompt logging rule
-├── README.md                           This file
+├── CLAUDE.md                       Claude Code instructions + prompt logging rule
+├── CONTRIBUTING.md                 How to build, run, and contribute
+├── LICENSE.md                      Proprietary — All Rights Reserved, Revorion AI
+├── README.md                       This file
+│
+├── Cargo.toml                      Rust workspace manifest
+├── Cargo.lock
+├── rust-toolchain.toml             Pinned Rust toolchain version
+│
+├── services/
+│   └── state-machine/              Rust — session state machine (:50051 gRPC)
+│       ├── Cargo.toml
+│       ├── proto/
+│       │   └── state_engine.proto  gRPC service definition
+│       └── src/
+│           ├── main.rs
+│           ├── state/              SessionPhase enum, SessionState, TransitionEngine
+│           ├── ac/                 Acceptance criteria evaluators (s1.rs – s6.rs)
+│           ├── gates/              Upload gate manager (Hard / Required / Triggered)
+│           └── error.rs
 │
 ├── docs/
+│   ├── sprints/
+│   │   ├── sprint0/                Discovery & documentation phase
+│   │   │   ├── README.md           Sprint 0 overview and exit criteria
+│   │   │   ├── BA_HITL_FLOW.md     7-phase BA conversation protocol
+│   │   │   ├── ARCHITECTURE.md     Trust hierarchy, invariants, engineering conventions
+│   │   │   └── DECISIONS.md        14 architectural decisions (tech stack, data layer, auth)
+│   │   └── sprint1/
+│   │       └── README.md           Core engine: state machine + RAG pipeline
 │   ├── architecture/
-│   │   ├── ontology.md                 Complete data model — entity schemas, relationships, JSON examples
-│   │   ├── EPISTEMOLOGY.md             Knowledge acquisition rules — trust, confidence, conflict, temporal validity
-│   │   └── DATABASE.md                 Schema design, RLS policies, vector indexing, migration strategy
+│   │   ├── TECH_STACK.md           Service design, libraries, model versions (authoritative)
+│   │   ├── ontology.md             Complete data model — entity schemas, relationships
+│   │   ├── DATABASE.md             Schema, RLS, pgvector indexing, migration strategy
+│   │   └── EPISTEMOLOGY.md         Knowledge acquisition rules — trust, confidence, conflict
+│   ├── diagrams/                   Mermaid concept diagrams (state machine, trust, pipeline)
 │   └── logs/
-│       └── prompt_trail.md             Prompt registry — every user prompt logged (P-001 → current)
+│       └── prompt_trail.md         Append-only prompt registry (P-001 → current)
 │
-└── sprint0/
-    ├── README.md                        Sprint 0 overview, status, and exit criteria
-    ├── BA_HITL_FLOW.md                  7-phase BA conversation protocol with checkpoint definitions
-    ├── DECISIONS.md                     14 open architectural decisions — options, tradeoffs, status
-    └── ARCHITECTURE.md                  Core principles: trust hierarchy, invariants, engineering conventions
+    └── tech-docs/
+        └── state-machine.md        Deep-dive: SessionPhase enum, AC system, gate types,
+                                    TransitionEngine, gRPC interface, module structure
 ```
 
 ---
@@ -259,26 +286,43 @@ chitragupt/
 
 | Document | Audience | Purpose |
 |---|---|---|
-| [sprint0/BA_HITL_FLOW.md](sprint0/BA_HITL_FLOW.md) | BA · PM | How BAs interact with the system phase by phase |
-| [sprint0/DECISIONS.md](sprint0/DECISIONS.md) | Engineering · Architecture | All open tech decisions with options and tradeoffs |
-| [sprint0/ARCHITECTURE.md](sprint0/ARCHITECTURE.md) | Engineering | Trust rules, invariants, coding and git conventions |
+| [docs/tech-docs/state-machine.md](docs/tech-docs/state-machine.md) | Engineering | Complete technical reference for the Rust state machine kernel |
+| [docs/architecture/TECH_STACK.md](docs/architecture/TECH_STACK.md) | Engineering · Architecture | Service design, library choices, model versions, gRPC interfaces |
+| [docs/sprints/sprint0/BA_HITL_FLOW.md](docs/sprints/sprint0/BA_HITL_FLOW.md) | BA · PM | How BAs interact with the system phase by phase |
+| [docs/sprints/sprint0/DECISIONS.md](docs/sprints/sprint0/DECISIONS.md) | Engineering · Architecture | 14 architectural decisions — options, tradeoffs, status |
+| [docs/sprints/sprint0/ARCHITECTURE.md](docs/sprints/sprint0/ARCHITECTURE.md) | Engineering | Trust rules, invariants, coding and git conventions |
+| [docs/sprints/sprint1/README.md](docs/sprints/sprint1/README.md) | Engineering | Sprint 1 priorities, epics, acceptance criteria, definition of done |
 | [docs/architecture/ontology.md](docs/architecture/ontology.md) | Engineering · Architecture | Complete entity schemas, relationships, and JSON contracts |
-| [docs/architecture/EPISTEMOLOGY.md](docs/architecture/EPISTEMOLOGY.md) | Engineering · AI/ML | Strict knowledge acquisition, confidence scoring, conflict protocol |
-| [docs/architecture/DATABASE.md](docs/architecture/DATABASE.md) | Engineering · DBA | Schema, RLS, pgvector indexing, migration, residency |
-| [docs/logs/prompt_trail.md](docs/logs/prompt_trail.md) | All | Chronological prompt registry — full project decision audit trail |
+| [docs/architecture/EPISTEMOLOGY.md](docs/architecture/EPISTEMOLOGY.md) | Engineering · AI/ML | Knowledge acquisition, confidence scoring, conflict protocol |
+| [docs/architecture/DATABASE.md](docs/architecture/DATABASE.md) | Engineering · DBA | Schema, RLS, pgvector indexing, migration, data residency |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Engineering | Build, run, contribute — per-service setup and conventions |
 
 ---
 
-## Status
+## Quick Start
 
-**Sprint 0 — Foundation.** No implementation code until all decisions in [`sprint0/DECISIONS.md`](sprint0/DECISIONS.md) reach `DECIDED` status.
+```bash
+# Infrastructure
+docker compose up -d postgres redis
 
-Exit criteria:
-- [ ] All 14 decisions in DECISIONS.md reach `GUIDED` or `DECIDED`
-- [ ] BA_HITL_FLOW.md approved by BA team lead
-- [ ] ARCHITECTURE.md ratified by engineering lead
-- [ ] Ontology validated against BA flow outputs
-- [ ] DATABASE.md schema reviewed and migration scripts drafted
+# Rust state machine
+cargo build && cargo run
+
+# Python AI orchestration (once ai-orchestration service is scaffolded)
+cd services/ai-orchestration && uv sync && uv run python -m chitragupt.server
+
+# Go API gateway (once api-gateway service is scaffolded)
+cd services/api-gateway && go run ./cmd/server
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions, environment variables, and development conventions.
+
+---
+
+## License
+
+Proprietary — Copyright © 2026 Revorion AI. All Rights Reserved.
+See [LICENSE.md](LICENSE.md) for full terms.
 
 ---
 

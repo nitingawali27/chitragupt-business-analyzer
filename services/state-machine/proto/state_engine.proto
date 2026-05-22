@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package chitragupt.state;
+
+// StateEngine — gRPC interface between the Go API gateway and the Rust state machine.
+// This file is a stub. Code generation is wired in Sprint 1 EPIC-1.
+
+service StateEngine {
+  // Process one BA turn. Returns streaming tokens + turn completion metadata.
+  rpc ProcessTurn(TurnRequest) returns (stream TurnEvent);
+
+  // Request a phase transition. Returns whether transition was approved.
+  rpc RequestTransition(TransitionRequest) returns (TransitionResponse);
+
+  // Return the current session state summary.
+  rpc GetSessionState(SessionQuery) returns (SessionSummary);
+}
+
+message TurnRequest {
+  string session_id = 1;
+  string message    = 2;
+  string intent     = 3; // populated by Go if pre-classified
+}
+
+message TurnEvent {
+  oneof event {
+    string token           = 1; // streaming token
+    TurnComplete complete  = 2; // end of turn
+  }
+}
+
+message TurnComplete {
+  bool transition_ready = 1;
+  repeated string ac_gaps = 2;
+  repeated string open_gates = 3;
+}
+
+message TransitionRequest {
+  string session_id   = 1;
+  string target_phase = 2;
+}
+
+message TransitionResponse {
+  bool approved        = 1;
+  string error_message = 2;
+}
+
+message SessionQuery {
+  string session_id = 1;
+}
+
+message SessionSummary {
+  string session_id    = 1;
+  string current_phase = 2;
+  int32  turn_count    = 3;
+  bool   transition_ready = 4;
+  double total_cost_usd   = 5;
+}

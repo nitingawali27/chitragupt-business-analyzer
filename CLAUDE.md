@@ -31,11 +31,14 @@ This rule applies to all sessions in this project, without exception.
 
 | Document | Purpose |
 |---|---|
-| `sprint0/BA_HITL_FLOW.md` | BA onboarding protocol (7-phase HITL state machine) |
-| `sprint0/DECISIONS.md` | All open architectural decisions |
-| `sprint0/ARCHITECTURE.md` | Trust hierarchy, invariants, engineering conventions |
+| `docs/sprints/sprint0/BA_HITL_FLOW.md` | BA onboarding protocol (7-phase HITL state machine) |
+| `docs/sprints/sprint0/DECISIONS.md` | All open architectural decisions |
+| `docs/sprints/sprint0/ARCHITECTURE.md` | Trust hierarchy, invariants, engineering conventions |
+| `docs/sprints/sprint1/README.md` | Sprint 1 priorities, epics, AC definitions |
+| `docs/architecture/TECH_STACK.md` | Authoritative tech stack — Rust/Python/Go, libraries, model versions |
 | `docs/architecture/ontology.md` | Complete data model and entity schemas |
 | `docs/logs/prompt_trail.md` | Prompt registry (append-only) |
+| `docs/tech-docs/state-machine.md` | Deep-dive technical reference for the Rust state machine kernel |
 
 ---
 
@@ -53,6 +56,6 @@ This rule applies to all sessions in this project, without exception.
 ## What NOT to do
 
 - Do not create new documentation files unless the user explicitly asks for one.
-- Do not implement code for any component where the corresponding decision in `sprint0/DECISIONS.md` is still OPEN.
+- Do not implement code for any component where the corresponding decision in `docs/sprints/sprint0/DECISIONS.md` is still OPEN.
 - Do not add orchestration middleware or framework-specific stubs — that decision is OPEN.
-- Do not introduce new ADR files — use `sprint0/DECISIONS.md` as the single decisions document.
+- Do not introduce new ADR files — use `docs/sprints/sprint0/DECISIONS.md` as the single decisions document.
